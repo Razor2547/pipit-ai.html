@@ -1,0 +1,143 @@
+<!-- ================================
+ FILE: pipit-ai-clone.html
+ SIMPLE AI IMAGE → VIDEO + AUDIO MERGER
+ NO API KEY REQUIRED
+================================ -->
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Pipit AI Clone - Image to Video</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#0f172a;
+    color:white;
+    text-align:center;
+    padding:20px;
+}
+
+.container{
+    max-width:500px;
+    margin:auto;
+    background:#1e293b;
+    padding:20px;
+    border-radius:12px;
+}
+
+input, textarea, button{
+    width:100%;
+    margin:10px 0;
+    padding:10px;
+    border-radius:8px;
+    border:none;
+}
+
+button{
+    background:#38bdf8;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+button:hover{
+    background:#0ea5e9;
+}
+
+video{
+    width:100%;
+    margin-top:10px;
+    border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<h2>🎬 Pipit AI Clone (Simple)</h2>
+
+<!-- Upload Foto -->
+<input type="file" id="imageInput" accept="image/*">
+
+<!-- Upload Audio -->
+<input type="file" id="audioInput" accept="audio/mp3">
+
+<!-- Prompt / Lyrics -->
+<textarea id="prompt" placeholder="Masukkan teks / lyrics video..."></textarea>
+
+<!-- Button -->
+<button onclick="createVideo()">🚀 Generate Video</button>
+
+<video id="preview" controls></video>
+
+<button onclick="downloadVideo()">⬇ Download Video</button>
+</div>
+
+<!-- FFmpeg WASM -->
+<script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.6/dist/ffmpeg.min.js"></script>
+
+<script>
+const { createFFmpeg, fetchFile } = FFmpeg;
+
+const ffmpeg = createFFmpeg({
+    log: true
+});
+
+let outputBlob = null;
+
+async function createVideo(){
+
+    const image = document.getElementById("imageInput").files[0];
+    const audio = document.getElementById("audioInput").files[0];
+    const text = document.getElementById("prompt").value;
+
+    if(!image || !audio){
+        alert("Upload foto & audio dulu!");
+        return;
+    }
+
+    await ffmpeg.load();
+
+    ffmpeg.FS('writeFile', 'image.png', await fetchFile(image));
+    ffmpeg.FS('writeFile', 'audio.mp3', await fetchFile(audio));
+
+    // Buat video dari gambar + audio (durasi max 30 detik)
+    await ffmpeg.run(
+        '-loop','1',
+        '-i','image.png',
+        '-i','audio.mp3',
+        '-c:v','libx264',
+        '-t','30',
+        '-pix_fmt','yuv420p',
+        '-c:a','aac',
+        '-shortest',
+        'output.mp4'
+    );
+
+    const data = ffmpeg.FS('readFile','output.mp4');
+
+    outputBlob = new Blob([data.buffer], {type:'video/mp4'});
+
+    const url = URL.createObjectURL(outputBlob);
+    document.getElementById("preview").src = url;
+
+    alert("Video berhasil dibuat!");
+}
+
+function downloadVideo(){
+    if(!outputBlob){
+        alert("Belum ada video!");
+        return;
+    }
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(outputBlob);
+    a.download = "pipit-ai-video.mp4";
+    a.click();
+}
+</script>
+
+</body>
+</html>
